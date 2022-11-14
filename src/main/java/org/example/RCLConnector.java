@@ -48,10 +48,10 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         idmUserId = _configuration.getIdmUserName();
         idmUserPassword = _configuration.getIdmPassword();
         httpClient = HttpClientBuilder.create().build();
-        System.out.println(" IDM host "+ idmHost);
-        System.out.println(" IDM Port "+ idmPort);
-        System.out.println(" IDM User ID "+ idmUserId);
-        System.out.println(" IDM Password "+ SecurityUtil.decrypt(idmUserPassword));
+        //System.out.println(" IDM host "+ idmHost);
+        //System.out.println(" IDM Port "+ idmPort);
+        //System.out.println(" IDM User ID "+ idmUserId);
+        //System.out.println(" IDM Password "+ SecurityUtil.decrypt(idmUserPassword));
     }
 
 
@@ -99,18 +99,10 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
     @Override
     public Uid update(ObjectClass objectClass, Uid uid, Set<Attribute> set, OperationOptions operationOptions) {
-        System.out.println(" ######################I am in update ###########################");
+        System.out.println(" ###################### Entering update ###########################");
         System.out.println(uid.getUidValue());
-        System.out.println(" ######################I am in update ###########################");
+
         List<Attribute> groupList = null;
-        /*
-        for(Attribute attribute : set) {
-            //System.out.println(attribute.getName() +"=====>"+attribute.getValue());
-            if(attribute.getName() == "roles"){
-               groupList = attribute.getValue();
-            }
-        }
-         */
         groupList = set.stream()
                 .filter(attr -> (attr.getName().equals("roles")))
                 .collect(Collectors.toList());
@@ -120,19 +112,8 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
             if(userGroups.size() > 0) {
                 handleRoleMemberships(uid.getUidValue(),userGroups);
             }
-            //Iterator i = userGroups.iterator();
-            //while (i.hasNext()) {
-            //    String s = (String) i.next();
-            //    System.out.println("Role " + s);
-            //}
         }
-        //if (groupList.size() > 0) {
-        //    groupList.to
-            //List<Object> userGroups = groupList.get(0).getValue();
-            //if (userGroups != null) {
-            //    handleRoleMemberships(uid.getUidValue(),userGroups);
-            //}
-        //}
+        System.out.println(" ###################### Leaving update ###########################");
         return uid;
     }
 
@@ -480,12 +461,13 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
         ArrayList<String> rolesToKeepList = new ArrayList<>();
         ArrayList<IDMRole> rolesToRemoveList = new ArrayList<>();
+        System.out.println("**************** Entering handleRoleMemberships ********");
         try {
             al = getUserGroups(uid);
         } catch (Exception e1) {    System.out.println("handleRoleMemberships : Error getting current groups");}
         try {
             if (groups.size() > 0) {
-                //System.out.println("**************** End State Groups ********");
+                System.out.println("**************** End State Groups ********");
                 String currentRole = null;
                 Iterator i = groups.iterator();
                 while (i.hasNext()) {
@@ -495,15 +477,14 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                 }
             }
         } catch (Exception e1) {   System.out.println("handleRoleMemberships : Error getting end state groups");}
-        //System.out.println("**************** Current Groups ********");
+        System.out.println("**************** Current Groups ********");
         try {
             if (al.size() > 0) {
-                //System.out.println("**************** Current Groups ********");
                 Iterator alIter = al.iterator();
                 while (alIter.hasNext()) {
                     IDMRole roleToFind = (IDMRole) alIter.next();
                     String rName = roleToFind.get_roleName();
-                    //System.out.println(rName + "<<<<<<**************** >>");
+                    System.out.println(rName + "<<<<<<**************** >>");
                     if (rolesToKeepList.contains(rName)) {
                         System.out.println("<<<<<<****FOUND " + rName + " ************ >>");
                     } else {
@@ -514,7 +495,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         } catch (Exception e1) {   System.out.println("handleRoleMemberships : Error getting comparing");}
 
         if(rolesToRemoveList.size() > 0) {
-            //System.out.println("**************** Remove Groups ********");
+            System.out.println("**************** Remove Groups ********");
             Iterator rolesToRemoveIter = rolesToRemoveList.iterator();
             while(rolesToRemoveIter.hasNext()) {
                 IDMRole role2Remove = (IDMRole)rolesToRemoveIter.next();
@@ -527,6 +508,8 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                 System.out.println(" roles clean up failed ************ >>");
             }
         }
+
+        System.out.println("**************** Leaving handleRoleMemberships ********");
     }
 
     private boolean removeRole(String uid, ArrayList<IDMRole> roles2remove){

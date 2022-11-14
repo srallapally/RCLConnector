@@ -1,0 +1,90 @@
+{
+    "displayName": "RCL IDM",
+    "id": "rcl.idm",
+    "bundleName": "org.example.rcl-connector",
+    "bundleVersion": "1.5.20.9",
+    "templateType": "Enterprise",
+    "image": "img/logos/groovy.png",
+    "dateUpdated": "05/26/2022:17:36:30",
+    "description": "",
+    "supportUrl": "http://www.forgerock.com",
+    "categories": [],
+    "objectTypes": [],
+    "capabilities": {
+        "provisioning": {
+            "Create": false,
+            "Read": true,
+            "Update": true,
+            "Delete": true
+        },
+        "sso": {
+            "SAML": false,
+            "OIDC": false,
+            "WS-Fed": false,
+            "Agent": false
+        }
+    },
+    "schema": {
+        "_meta": {
+            "type": "system",
+            "isExternalRepo": true,
+            "properties": {
+                "idmHost": {
+                    "isRequired": true,
+                    "isMultiValue": false,
+                    "display": {
+                        "name": "IDM Host",
+                        "isVisible": true,
+                        "order": 1
+                    },
+                    "text": {
+                        "defaultValue": "http://localhost"
+                    }
+                },
+                "idmPort": {
+                    "isRequired": true,
+                    "display": {
+                        "name": "IDM Port",
+                        "isVisible": true,
+                        "order": 2
+                    },
+                    ,
+                    "text": {
+                        "defaultValue": "8080"
+                    }
+                },
+                "idmUserName": {
+                    "isRequired": true,
+                    "display": {
+                        "name": "User ID",
+                        "isVisible": true,
+                        "order": 3
+                    }
+                },
+                "idmPassword": {
+                    "isRequired": true,
+                    "display": {
+                        "name": "Password",
+                        "isVisible": true,
+                        "isPasswordField": true,
+                        "order": 4
+                    }
+                }
+            }
+        },
+        "properties": {
+            "idmHost": {
+                "type": "text"
+            },
+            "idmPort": {
+                "type": "text"
+            },
+            "idmUserName": {
+                "type": "text"
+            },
+            "idmPassword": {
+                "type": "text"
+            }
+        }
+    }
+}
