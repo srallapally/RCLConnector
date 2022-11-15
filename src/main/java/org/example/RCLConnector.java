@@ -109,9 +109,11 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
         if(groupList.size() > 0) {
             List<Object> userGroups = groupList.get(0).getValue();
+            //System.out.println("Size of groups: "+ userGroups.size());
             if(userGroups.size() > 0) {
-                handleRoleMemberships(uid.getUidValue(),userGroups);
-            }
+                System.out.println(" User "+ uid.getUidValue() +" has "+userGroups.size() +" groups ###########################");
+            } else { System.out.println(" No groups were sent ");}
+            handleRoleMemberships(uid.getUidValue(),userGroups);
         }
         System.out.println(" ###################### Leaving update ###########################");
         return uid;
@@ -205,7 +207,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                 }
             }
 
-            //System.out.println(" URL: "+userStr);
+            System.out.println(" URL: "+userStr);
             HttpGet httpGet = new HttpGet(userStr);
             httpGet.setHeader("X-OpenIDM-Username", idmUserId);
             httpGet.setHeader("X-OpenIDM-Password", SecurityUtil.decrypt(idmUserPassword));
@@ -347,6 +349,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         String mail = result.get("mail").textValue();
         builder.setUid(uid);
         builder.setName(userName);
+        System.out.println(" Building user object for: "+userName);
         builder.addAttribute(AttributeBuilder.build("userId",uid));
         builder.addAttribute(AttributeBuilder.build("userName",userName));
         builder.addAttribute(AttributeBuilder.build("givenName",givenName));
@@ -354,6 +357,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         builder.addAttribute(AttributeBuilder.build("emailAddress",mail));
         ArrayList<String> al = new ArrayList<>();
         String memStr = idmHost+":"+idmPort+"/openidm/managed/user/"+ uid +"/roles?_queryFilter=true&_fields=_ref/*,name";
+        System.out.println(" User URL: "+ memStr);
         CloseableHttpClient httpClient1 =  HttpClients.createDefault();
         HttpGet httpGet1 = new HttpGet(memStr);
         httpGet1.setHeader("X-OpenIDM-Username", idmUserId);
@@ -375,6 +379,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                         for (JsonNode objNode : result1) {
                             String grpName = null;
                             grpName = objNode.get("name").textValue();
+                            System.out.println("User "+ userName +" has Group "+grpName);
                             al.add(grpName);
                         }
                     }
@@ -416,21 +421,23 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         ArrayList<IDMRole> al = new ArrayList<>();
         String memStr = idmHost+":"+idmPort+"/openidm/managed/user/"+ userId +"/roles?_queryFilter=true&_fields=_ref/*,name";
 
-        CloseableHttpClient httpClient =  HttpClients.createDefault();
+        CloseableHttpClient httpClient2 =  HttpClients.createDefault();
 
-        HttpGet httpGet = new HttpGet(memStr);
-        httpGet.setHeader("X-OpenIDM-Username", idmUserId);
-        httpGet.setHeader("X-OpenIDM-Password", SecurityUtil.decrypt(idmUserPassword));
-        httpGet.setHeader("Accept-API-Version", "resource=1.0");
-        httpGet.setHeader("Content-Type", "application/json");
+        HttpGet httpGet2 = new HttpGet(memStr);
+        httpGet2.setHeader("X-OpenIDM-Username", idmUserId);
+        httpGet2.setHeader("X-OpenIDM-Password", SecurityUtil.decrypt(idmUserPassword));
+        httpGet2.setHeader("Accept-API-Version", "resource=1.0");
+        httpGet2.setHeader("Content-Type", "application/json");
         try {
-            CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
-            int sc = httpResponse.getStatusLine().getStatusCode();
+            CloseableHttpResponse httpResponse2 = httpClient2.execute(httpGet2);
+            int sc = httpResponse2.getStatusLine().getStatusCode();
             if (sc == HttpStatus.SC_OK) {
-                HttpEntity httpEntity = httpResponse.getEntity();
-                if (httpEntity != null) {
-                    String res = EntityUtils.toString(httpEntity);
+                HttpEntity httpEntity2 = httpResponse2.getEntity();
+                if (httpEntity2 != null) {
+                    String res = EntityUtils.toString(httpEntity2);
+                    //System.out.println("-----------get User Groups---------");
                     //System.out.println(res);
+                    //System.out.println("-----------get User Groups---------");
                     ObjectMapper map = new ObjectMapper();
                     JsonNode node = map.readTree(res);
                     JsonNode result = node.findPath("result");
@@ -458,13 +465,10 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
     private void handleRoleMemberships(String uid,List<Object> groups) {
         ArrayList<IDMRole> al = new ArrayList<>();
-
         ArrayList<String> rolesToKeepList = new ArrayList<>();
         ArrayList<IDMRole> rolesToRemoveList = new ArrayList<>();
         System.out.println("**************** Entering handleRoleMemberships ********");
-        try {
-            al = getUserGroups(uid);
-        } catch (Exception e1) {    System.out.println("handleRoleMemberships : Error getting current groups");}
+
         try {
             if (groups.size() > 0) {
                 System.out.println("**************** End State Groups ********");
@@ -475,37 +479,54 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                     System.out.println("**************** >>" + currentRole);
                     rolesToKeepList.add(currentRole);
                 }
+            } else {
+                System.out.println("**************** User has no Groups left. All Groups will be revoked ********");
             }
         } catch (Exception e1) {   System.out.println("handleRoleMemberships : Error getting end state groups");}
-        System.out.println("**************** Current Groups ********");
+        System.out.println("**************** Comparing Groups ********");
         try {
+            System.out.println("**************** Get current Groups ********");
+            al = getUserGroups(uid);
+
             if (al.size() > 0) {
                 Iterator alIter = al.iterator();
                 while (alIter.hasNext()) {
                     IDMRole roleToFind = (IDMRole) alIter.next();
                     String rName = roleToFind.get_roleName();
-                    System.out.println(rName + "<<<<<<**************** >>");
-                    if (rolesToKeepList.contains(rName)) {
-                        System.out.println("<<<<<<****FOUND " + rName + " ************ >>");
+                    System.out.println(rName + "<<<<<<** checking ************** >>");
+                    if (rolesToKeepList.size() > 0) {
+                        if (rolesToKeepList.contains(rName)) {
+                            System.out.println("<<<<<<****FOUND " + rName + " ************ >>");
+                        } else {
+                            System.out.println("Adding " + rName + " to remove list");
+                            rolesToRemoveList.add(roleToFind);
+                        }
                     } else {
+                        System.out.println("Adding " + rName + " to remove list");
                         rolesToRemoveList.add(roleToFind);
                     }
                 }
+            } else {
+                System.out.println("User has no Groups");
             }
-        } catch (Exception e1) {   System.out.println("handleRoleMemberships : Error getting comparing");}
+        } catch (Exception e1) {   System.out.println("handleRoleMemberships : Error comparing end state and current");}
 
         if(rolesToRemoveList.size() > 0) {
             System.out.println("**************** Remove Groups ********");
-            Iterator rolesToRemoveIter = rolesToRemoveList.iterator();
-            while(rolesToRemoveIter.hasNext()) {
-                IDMRole role2Remove = (IDMRole)rolesToRemoveIter.next();
-                System.out.println("<<<<<<****Remove "+role2Remove.get_roleName() +" ************ >>");
-            }
-            //System.out.println("************************************************");
-            if(removeRole(uid,rolesToRemoveList)) {
-                System.out.println(" roles cleaned up successfully ************ >>");
+            System.out.println(" role removal for "+ rolesToRemoveList.size() +" roles ");
+            if (rolesToRemoveList.size() > 1) {
+                System.out.println(" ERROR ");
             } else {
-                System.out.println(" roles clean up failed ************ >>");
+                Iterator rolesToRemoveIter = rolesToRemoveList.iterator();
+                while (rolesToRemoveIter.hasNext()) {
+                    IDMRole role2Remove = (IDMRole) rolesToRemoveIter.next();
+                    System.out.println("<<<<<<****Remove " + role2Remove.get_roleName() + " ************ >>");
+                }
+                if (removeRole(uid, rolesToRemoveList)) {
+                    System.out.println(" roles cleaned up successfully ************ >>");
+                } else {
+                    System.out.println(" roles clean up failed ************ >>");
+                }
             }
         }
 
@@ -514,17 +535,18 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
     private boolean removeRole(String uid, ArrayList<IDMRole> roles2remove){
         String roleDeleteStr = idmHost+":"+idmPort+"/openidm/managed/user/" + uid;
-        CloseableHttpClient httpClient =  HttpClients.createDefault();
+        CloseableHttpClient httpClient3 =  HttpClients.createDefault();
         try {
-            HttpPatch httpPatch = new HttpPatch(roleDeleteStr);
-            httpPatch.setHeader("X-OpenIDM-Username", idmUserId);
-            httpPatch.setHeader("X-OpenIDM-Password", SecurityUtil.decrypt(idmUserPassword));
-            httpPatch.setHeader("Accept-API-Version", "resource=1.0");
-            httpPatch.setHeader("Content-Type", "application/json");
+            HttpPatch httpPatch3 = new HttpPatch(roleDeleteStr);
+            httpPatch3.setHeader("X-OpenIDM-Username", idmUserId);
+            httpPatch3.setHeader("X-OpenIDM-Password", SecurityUtil.decrypt(idmUserPassword));
+            httpPatch3.setHeader("Accept-API-Version", "resource=1.0");
+            httpPatch3.setHeader("Content-Type", "application/json");
             if(roles2remove.size() > 0){
                 Iterator roles2removeIter = roles2remove.iterator();
                 while(roles2removeIter.hasNext()){
                     IDMRole role = (IDMRole) roles2removeIter.next();
+                    System.out.println("**************** Removing"+ role.get_roleName() +" ********");
                     String str = "[ { \"operation\":  \"remove\", \"field\": \"/roles\", " +
                             "\"value\": { \"_ref\": \""+role.get_roleRef()+"\"," +
                             " \"_refResourceCollection\":  \"managed/role\", " +
@@ -534,12 +556,12 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                             "\"_rev\": \""+ role.get_refPropRev() +"\" } } }]";
                     System.out.println(" Payload ");
                     System.out.println(str);
-                    StringEntity entity = new StringEntity(str);
+                    StringEntity entity3 = new StringEntity(str);
                     //entity.setContentType();
-                    httpPatch.setEntity(entity);
-                    CloseableHttpResponse httpResponse = httpClient.execute(httpPatch);
-                    String msg = EntityUtils.toString(httpResponse.getEntity());
-                    System.out.println(msg);
+                    httpPatch3.setEntity(entity3);
+                    CloseableHttpResponse httpResponse3 = httpClient3.execute(httpPatch3);
+                    String msg = EntityUtils.toString(httpResponse3.getEntity());
+                    //System.out.println(msg);
                 }
             }
             return true;
