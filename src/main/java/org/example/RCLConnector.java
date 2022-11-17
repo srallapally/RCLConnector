@@ -207,6 +207,8 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                     }
                     if(null != _pageSize) {
                         userStr = userStr + "&_pageSize=" + _pageSize;
+                    } else {
+                        userStr = userStr + "&_pageSize=100";
                     }
                     if (null != _pageCookie) {
                         userStr = userStr + "&_pagedResultsCookie=" + _pageCookie;
