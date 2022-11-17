@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Bundle-Name: RCL Connector
+Bundle-SymbolicName: org.example.rcl-connector
+Bundle-Vendor: Example Inc
+Bundle-Version: 1.5.20.9
+ConnectorBundle-FrameworkVersion: 1.5
+ConnectorBundle-Name: org.example.rcl-connector
+ConnectorBundle-Version: 1.5.20.9
+mplementation-Build: 0
+Implementation-Title: RCL Connector
+Implementation-Vendor: Example Inc
+Implementation-Vendor-Id: org.example.connectors
+Implementation-Version: 1.5.20.9

@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="org.example.rclconnector.1.5.20.9">
+    <output-path>$PROJECT_DIR$/out/artifacts/org_example_rclconnector_1_5_20_9</output-path>
+    <root id="archive" name="rcl-connector.1.5.20.9.jar">
+      <element id="directory" name="META-INF">
+        <element id="file-copy" path="$PROJECT_DIR$/src/main/resources/META-INF/MANIFEST.MF" />
+      </element>
+      <element id="module-output" name="RCLConnector" />
+    </root>
+  </artifact>
+</component>

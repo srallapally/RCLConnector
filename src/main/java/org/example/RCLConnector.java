@@ -30,6 +30,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
@@ -47,6 +49,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         idmPort = _configuration.getIdmPort();
         idmUserId = _configuration.getIdmUserName();
         idmUserPassword = _configuration.getIdmPassword();
+        idmUserFilter = _configuration.getIdmUserFilter();
         httpClient = HttpClientBuilder.create().build();
         //System.out.println(" IDM host "+ idmHost);
         //System.out.println(" IDM Port "+ idmPort);
@@ -197,7 +200,11 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                 if (null != uuid) {
                     userStr = idmHost+":" + idmPort +"/openidm/managed/user/"+uuid.getUidValue();
                 } else {
-                    userStr = idmHost + ":" + idmPort + "/openidm/managed/user?_queryFilter=true";
+                    if(null != idmUserFilter) {
+                        userStr = idmHost + ":" + idmPort + "/openidm/managed/user?_queryFilter="+ URLEncoder.encode(idmUserFilter);
+                    } else {
+                        userStr = idmHost + ":" + idmPort + "/openidm/managed/user?_queryFilter=true";
+                    }
                     if(null != _pageSize) {
                         userStr = userStr + "&_pageSize=" + _pageSize;
                     }
@@ -342,8 +349,14 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
     }
     public ConnectorObject buildUserObject(JsonNode result, ObjectClass objectClass) {
         ConnectorObjectBuilder builder = new ConnectorObjectBuilder();
-        String uid = result.get("_id").textValue();
-        String userName = result.get("userName").textValue();
+        String uid = null;
+        uid = result.get("_id").textValue();
+        String userName = null;
+        if(null != result.get("userName").textValue()) {
+            userName = result.get("userName").textValue();
+        } else {
+            userName = "NA" + new Random().nextInt(10000);
+        }
         String givenName = result.get("givenName").textValue();
         String sn = result.get("sn").textValue();
         String mail = result.get("mail").textValue();
@@ -599,4 +612,6 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
     private String userStr = null;
 
     private String groupStr = null;
+
+    private String idmUserFilter = null;
 }

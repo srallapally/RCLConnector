@@ -12,6 +12,8 @@ public class RCLConfiguration  extends AbstractConfiguration {
     private String idmUserName;
     private GuardedString idmPassword;
 
+    private String idmUserFilter;
+
     @ConfigurationProperty(order = 1, displayMessageKey = "idmhost.key",groupMessageKey = "basic.group", helpMessageKey = "idmhost.help",
             required = true, confidential = false)
     public String getIdmHost(){
@@ -50,6 +52,16 @@ public class RCLConfiguration  extends AbstractConfiguration {
 
     public void setIdmPassword(GuardedString idmPassword) {
         this.idmPassword = idmPassword;
+    }
+
+    @ConfigurationProperty(order = 5, displayMessageKey = "idmuserfilter.key",groupMessageKey = "basic.group", helpMessageKey = "idmuserfilter.help",
+            required = false, confidential = false)
+    public String getIdmUserFilter(){
+        return idmUserFilter;
+    }
+
+    public void setIdmUserFilter(String idmUserFilter) {
+        this.idmUserFilter = idmUserFilter;
     }
 
     public RCLConfiguration () {

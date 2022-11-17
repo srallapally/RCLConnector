@@ -69,6 +69,15 @@
                         "isPasswordField": true,
                         "order": 4
                     }
+                },
+                "idmUserFilter": {
+                    "isRequired": "false",
+                    "display":{
+                         "name": "User Filter",
+                         "isVisible": true,
+                         "order": 5
+
+                    }
                 }
             }
         },
@@ -83,6 +92,9 @@
                 "type": "text"
             },
             "idmPassword": {
+                "type": "text"
+            },
+            "idmUserFilter":{
                 "type": "text"
             }
         }
