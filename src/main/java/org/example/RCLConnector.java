@@ -197,7 +197,6 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                 }
             }
 
-            System.out.println(" Base Search: "+ userStr);
             String res = null;
             JsonNode node = null;
             JsonNode result = null;
@@ -210,7 +209,6 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
             if(_pagedResultsOffset > 0) {
                 _pageCookie = null;
-                System.out.println(" Will perform offset-based search ");
             } else {
                 System.out.println(" Will perform cookie-based search ");
             }
@@ -247,29 +245,33 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                         qry = userStr +"&_pageSize="+_pageSize;
                         System.out.println(" URL without Offset: " + qry);
                     }
+                    /*
                     res = getObject(qry);
+
                     if(null != res) {
                         node = map.readTree(res);
                         result = node.findPath("result");
                         _pageCookie = node.get("pagedResultsCookie").textValue();
-                        System.out.println(" Cookie: " + _pageCookie);
                         int remainingResults = -1;
-                        System.out.println(" Initial Search");
                         handleQueryResults(objectClass, resultsHandler, result);
                         if (resultsHandler instanceof SearchResultsHandler) {
                             final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
                             ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
                         }
                     }
+
+                     */
                     // Finished initial
-                    System.out.println(" Getting the rest of the results: ");
-                    do {
-                        qry = userStr +"&_pageSize="+_pageSize+"&_pagedResultsCookie="+_pageCookie;
+                   // do {
+                        if(null != _pageCookie) {
+                            qry = userStr + "&_pageSize=" + _pageSize+"&_pagedResultsCookie="+_pageCookie;
+                        } else {
+                            qry = userStr + "&_pageSize=" + _pageSize;
+                        }
                         res = getObject(qry);
                         if(null != res) {
                             node = map.readTree(res);
                             _pageCookie = node.get("pagedResultsCookie").textValue();
-                            System.out.println(" Cookie: " + _pageCookie);
                             result = node.findPath("result");
                             handleQueryResults(objectClass, resultsHandler, result);
                             if (resultsHandler instanceof SearchResultsHandler) {
@@ -277,7 +279,9 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                                 ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
                             }
                         }
-                    } while(null !=_pageCookie);
+                        //if(_pagedResultsOffset > 0)
+                        //    _pageCookie = null;
+                    //} while(null !=_pageCookie);
 
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
