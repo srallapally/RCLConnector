@@ -1,5 +1,6 @@
 package org.example;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -52,7 +53,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         idmUserFilter = _configuration.getIdmUserFilter();
         httpClient = HttpClientBuilder.create().build();
         //System.out.println(" IDM host "+ idmHost);
-        //System.out.println(" IDM Port "+ idmPort);
+        System.out.println(" IDM Port "+ idmPort);
         //System.out.println(" IDM User ID "+ idmUserId);
         //System.out.println(" IDM Password "+ SecurityUtil.decrypt(idmUserPassword));
     }
@@ -65,7 +66,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
     @Override
     public Uid authenticate(ObjectClass objectClass, String s, GuardedString guardedString, OperationOptions operationOptions) {
-        httpClient =  HttpClients.createDefault();
+        httpClient = HttpClientBuilder.create().build();
         HttpGet httpGet = new HttpGet(idmHost+":"+idmPort+"/openidm/managed/user?_queryFilter=username%20sw%20%22"+idmUserId+"%22");
         httpGet.setHeader("X-OpenIDM-Username", idmUserId);
         httpGet.setHeader("X-OpenIDM-Password", SecurityUtil.decrypt(idmUserPassword));
@@ -162,28 +163,17 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
     @Override
     public void executeQuery(ObjectClass objectClass, Filter filter, ResultsHandler resultsHandler, OperationOptions operationOptions) {
-        //System.out.println(" I am in executeQuery with filter);" );
         boolean isGet = false;
         String s = null;
         ObjectMapper map = new ObjectMapper();
 
-        //System.out.println(objectClass.getObjectClassValue());
         Uid uuid = null;
         if(null != filter) {
             uuid = FrameworkUtil.getUidIfGetOperation(filter);
             isGet = true;
-          //if(null != uuid) {
-              //System.out.println("UID = "+ uuid.getUidValue());
-          //}
         }
 
-        httpClient =  HttpClients.createDefault();
-        if(null != operationOptions.getPageSize()){
-            _pageSize = operationOptions.getPageSize();
-        }
-        if(null != operationOptions.getPagedResultsCookie()) {
-            _pageCookie = operationOptions.getPagedResultsCookie();
-        }
+        httpClient = HttpClientBuilder.create().build();
 
         if (ObjectClass.ACCOUNT.equals(objectClass)) {
 
@@ -192,7 +182,6 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                     StartsWithFilter f = (StartsWithFilter) filter;
                     s = f.getAttribute().getName()+"sw%20%22"+f.getValue()+"%22";
                 }
-                //System.out.println("filter = "+s);
             }
             if(null != s) {
                 userStr = idmHost+":" + idmPort +"/openidm/managed/user?_queryFilter"+s;
@@ -205,59 +194,96 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                     } else {
                         userStr = idmHost + ":" + idmPort + "/openidm/managed/user?_queryFilter=true";
                     }
-                    if(null != _pageSize) {
-                        userStr = userStr + "&_pageSize=" + _pageSize;
-                    } else {
-                        userStr = userStr + "&_pageSize=100";
-                    }
-                    if (null != _pageCookie) {
-                        userStr = userStr + "&_pagedResultsCookie=" + _pageCookie;
-                    }
                 }
             }
 
-            System.out.println(" URL: "+userStr);
-            HttpGet httpGet = new HttpGet(userStr);
-            httpGet.setHeader("X-OpenIDM-Username", idmUserId);
-            httpGet.setHeader("X-OpenIDM-Password", SecurityUtil.decrypt(idmUserPassword));
-            httpGet.setHeader("Accept-API-Version", "resource=1.0");
-            httpGet.setHeader("Content-Type", "application/json");
-            try {
-                CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
-                int sc = httpResponse.getStatusLine().getStatusCode();
-                if (sc == HttpStatus.SC_OK) {
-                    HttpEntity httpEntity = httpResponse.getEntity();
-                    if (httpEntity != null) {
-                        // return it as a String
-                        String res = EntityUtils.toString(httpEntity);
+            System.out.println(" Base Search: "+ userStr);
+            String res = null;
+            JsonNode node = null;
+            JsonNode result = null;
+            ConnectorObject connectorObject = null;
+            int _pagedResultsOffset = 0;
 
-                        if(isGet) {
-                         //   System.out.println("isGet ");
-                         //   System.out.println(" Result : " + res);
-                            JsonNode node = map.readTree(res);
-                            ConnectorObject connectorObject = buildUserObject(node, objectClass);
-                            if (!resultHandle(connectorObject, resultsHandler)) {
-                                return;
-                            }
-                        } else {
-                            JsonNode node = map.readTree(res);
-                            JsonNode result = node.findPath("result");
-                            if (result.isArray()) {
-                                for (final JsonNode objNode : result) {
-                                    ConnectorObject connectorObject = buildUserObject(objNode, objectClass);
-                                    if (!resultHandle(connectorObject, resultsHandler)) {
-                                       //System.out.println("Result Handler can not handle result Object list");
-                                       return;
-                                    }
-                                }
-                            } else {
-                                System.out.println(result.toString());
-                            }
+            try {
+                _pagedResultsOffset = operationOptions.getPagedResultsOffset();
+            } catch (Exception e) {_pagedResultsOffset = 0;}
+
+            if(_pagedResultsOffset > 0) {
+                _pageCookie = null;
+                System.out.println(" Will perform offset-based search ");
+            } else {
+                System.out.println(" Will perform cookie-based search ");
+            }
+            if(isGet) {
+                System.out.println(" GET: "+ userStr);
+                try {
+                    res = getObject(userStr);
+                    if(null != res) {
+                        node = map.readTree(res);
+                        connectorObject = buildUserObject(node, objectClass);
+                        resultsHandler.handle(connectorObject);
+                    } else {
+                        System.out.println(" Null ");
+                    }
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            } else {
+                if(null != operationOptions.getPageSize()){
+                    _pageSize = operationOptions.getPageSize();
+                } else {
+                    _pageSize = 10;
+                }
+                userStr = userStr + "&_totalPagedResultsPolicy=EXACT";
+                String qry = null;
+                try {
+                    if( _pagedResultsOffset > 0){
+                        _pageCookie = null;
+                        qry = userStr +"&_pageSize="+_pageSize+"&_pagedResultsOffset="+_pagedResultsOffset;
+                        System.out.println(" URL with Offset: " + qry);
+                    } else {
+                        qry = userStr +"&_pageSize="+_pageSize;
+                        System.out.println(" URL without Offset: " + qry);
+                    }
+                    res = getObject(qry);
+                    if(null != res) {
+                        node = map.readTree(res);
+                        result = node.findPath("result");
+                        _pageCookie = node.get("pagedResultsCookie").textValue();
+                        System.out.println(" Cookie: " + _pageCookie);
+                        int remainingResults = -1;
+                        System.out.println(" Initial Search");
+                        handleQueryResults(objectClass, resultsHandler, result);
+                        if (resultsHandler instanceof SearchResultsHandler) {
+                            final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
+                            ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
                         }
                     }
+                    // Finished initial
+                    System.out.println(" Getting the rest of the results: ");
+                    do {
+                        qry = userStr +"&_pageSize="+_pageSize+"&_pagedResultsCookie="+_pageCookie;
+                        res = getObject(qry);
+                        if(null != res) {
+                            node = map.readTree(res);
+                            _pageCookie = node.get("pagedResultsCookie").textValue();
+                            System.out.println(" Cookie: " + _pageCookie);
+                            result = node.findPath("result");
+                            handleQueryResults(objectClass, resultsHandler, result);
+                            if (resultsHandler instanceof SearchResultsHandler) {
+                                final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
+                                ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
+                            }
+                        }
+                    } while(null !=_pageCookie);
+
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
-            }  catch (IOException e) {
-                  throw new RuntimeException(e);
             }
 
         } else if (ObjectClass.GROUP.equals(objectClass)) {
@@ -325,6 +351,27 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         System.out.println("Entering Test");
     }
 
+    private String getObject(String userStr) throws IOException {
+        String res = null;
+        HttpGet httpGet = new HttpGet(userStr);
+        httpGet.setHeader("X-OpenIDM-Username", this.idmUserId);
+        httpGet.setHeader("X-OpenIDM-Password", SecurityUtil.decrypt(idmUserPassword));
+        httpGet.setHeader("Accept-API-Version", "resource=1.0");
+        httpGet.setHeader("Content-Type", "application/json");
+        CloseableHttpClient httpClient = HttpClientBuilder.create().build();
+        CloseableHttpResponse httpResponse = httpClient.execute(httpGet);
+        int sc = httpResponse.getStatusLine().getStatusCode();
+        if (sc == HttpStatus.SC_OK) {
+            HttpEntity httpEntity = httpResponse.getEntity();
+            if (httpEntity != null) {
+                // return it as a String
+                res = EntityUtils.toString(httpEntity);
+                //System.out.println("Response: "+ res);
+            }
+        }
+        System.out.println("getObject returning");
+        return res;
+    }
     private ObjectClassInfo getUserObjectClassInfo(){
         Set<AttributeInfo> attributes = new HashSet<AttributeInfo>();
         ObjectClassInfoBuilder builder = new ObjectClassInfoBuilder();
@@ -582,6 +629,16 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
             return true;
         } catch (Exception e){ System.out.println("removeRole : Error removing role");}
         return false;
+    }
+    private void handleQueryResults(ObjectClass objectClass, ResultsHandler handler,
+                                    JsonNode result) {
+        System.out.println(" handleQueryResults ");
+        for (JsonNode objNode : result) {
+            ConnectorObject connectorObject = buildUserObject(objNode, objectClass);
+            if (!handler.handle(connectorObject)) {
+                break;
+            }
+        }
     }
     private boolean resultHandle(final Object obj, ResultsHandler resultsHandler) {
         if (obj instanceof ConnectorObject) {
