@@ -53,7 +53,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         idmUserFilter = _configuration.getIdmUserFilter();
         httpClient = HttpClientBuilder.create().build();
         //System.out.println(" IDM host "+ idmHost);
-        System.out.println(" IDM Port "+ idmPort);
+        //System.out.println(" IDM Port "+ idmPort);
         //System.out.println(" IDM User ID "+ idmUserId);
         //System.out.println(" IDM Password "+ SecurityUtil.decrypt(idmUserPassword));
     }
@@ -163,6 +163,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
     @Override
     public void executeQuery(ObjectClass objectClass, Filter filter, ResultsHandler resultsHandler, OperationOptions operationOptions) {
+        //System.out.println(" Calling executeQuery ");
         boolean isGet = false;
         String s = null;
         ObjectMapper map = new ObjectMapper();
@@ -210,10 +211,10 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
             if(_pagedResultsOffset > 0) {
                 _pageCookie = null;
             } else {
-                System.out.println(" Will perform cookie-based search ");
+                //System.out.println(" Will perform cookie-based search ");
             }
             if(isGet) {
-                System.out.println(" GET: "+ userStr);
+                //System.out.println(" GET: "+ userStr);
                 try {
                     res = getObject(userStr);
                     if(null != res) {
@@ -240,10 +241,10 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                     if( _pagedResultsOffset > 0){
                         _pageCookie = null;
                         qry = userStr +"&_pageSize="+_pageSize+"&_pagedResultsOffset="+_pagedResultsOffset;
-                        System.out.println(" URL with Offset: " + qry);
+                        //System.out.println(" URL with Offset: " + qry);
                     } else {
                         qry = userStr +"&_pageSize="+_pageSize;
-                        System.out.println(" URL without Offset: " + qry);
+                        //System.out.println(" URL without Offset: " + qry);
                     }
                     /*
                     res = getObject(qry);
@@ -262,7 +263,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
                      */
                     // Finished initial
-                   // do {
+                   do {
                         if(null != _pageCookie) {
                             qry = userStr + "&_pageSize=" + _pageSize+"&_pagedResultsCookie="+_pageCookie;
                         } else {
@@ -272,16 +273,22 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                         if(null != res) {
                             node = map.readTree(res);
                             _pageCookie = node.get("pagedResultsCookie").textValue();
+                            int totalRes = node.get("totalPagedResults").asInt();
+                            System.out.println("Cookie:"+_pageCookie+" Total Count:" + totalRes);
                             result = node.findPath("result");
                             handleQueryResults(objectClass, resultsHandler, result);
                             if (resultsHandler instanceof SearchResultsHandler) {
-                                final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
-                                ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
+                                if(null != _pageCookie) {
+                                    final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
+                                    ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
+                                } else {
+                                    ((SearchResultsHandler) resultsHandler).handleResult(new SearchResult());
+                                }
                             }
                         }
                         //if(_pagedResultsOffset > 0)
                         //    _pageCookie = null;
-                    //} while(null !=_pageCookie);
+                   } while(null !=_pageCookie);
 
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
@@ -373,7 +380,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                 //System.out.println("Response: "+ res);
             }
         }
-        System.out.println("getObject returning");
+        //System.out.println("getObject returning");
         return res;
     }
     private ObjectClassInfo getUserObjectClassInfo(){
@@ -423,7 +430,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         builder.addAttribute(AttributeBuilder.build("emailAddress",mail));
         ArrayList<String> al = new ArrayList<>();
         String memStr = idmHost+":"+idmPort+"/openidm/managed/user/"+ uid +"/roles?_queryFilter=true&_fields=_ref/*,name";
-        System.out.println(" User URL: "+ memStr);
+        //System.out.println(" User URL: "+ memStr);
         CloseableHttpClient httpClient1 =  HttpClients.createDefault();
         HttpGet httpGet1 = new HttpGet(memStr);
         httpGet1.setHeader("X-OpenIDM-Username", idmUserId);
@@ -445,7 +452,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                         for (JsonNode objNode : result1) {
                             String grpName = null;
                             grpName = objNode.get("name").textValue();
-                            System.out.println("User "+ userName +" has Group "+grpName);
+                            //System.out.println("User "+ userName +" has Group "+grpName);
                             al.add(grpName);
                         }
                     }
