@@ -263,7 +263,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
                      */
                     // Finished initial
-                   do {
+                   //do {
                         if(null != _pageCookie) {
                             qry = userStr + "&_pageSize=" + _pageSize+"&_pagedResultsCookie="+_pageCookie;
                         } else {
@@ -288,7 +288,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                         }
                         //if(_pagedResultsOffset > 0)
                         //    _pageCookie = null;
-                   } while(null !=_pageCookie);
+                   //} while(null !=_pageCookie);
 
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
