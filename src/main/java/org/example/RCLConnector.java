@@ -262,7 +262,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                     }
 
                      */
-                    // Finished initial
+                    // Finished initily
                    do {
                         if(null != _pageCookie) {
                             qry = userStr + "&_pageSize=" + _pageSize+"&_pagedResultsCookie="+_pageCookie;
