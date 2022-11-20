@@ -237,7 +237,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                         if(null != res) {
                             node = map.readTree(res);
                             _pageCookie = node.get("pagedResultsCookie").textValue();
-                            int totalRes = node.get("totalPagedResults").asInt();
+                            int totalRes = node.get("resultCount").asInt();
                             System.out.println("Cookie:" + _pageCookie + " Total Count:" + totalRes);
                             result = node.findPath("result");
                             handleQueryResults(objectClass, resultsHandler, result);
@@ -256,7 +256,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                             if(null != res) {
                                 node = map.readTree(res);
                                 _pageCookie = node.get("pagedResultsCookie").textValue();
-                                int totalRes = node.get("totalPagedResults").asInt();
+                                int totalRes = node.get("resultCount").asInt();
                                 System.out.println("Cookie:" + _pageCookie + " Total Count:" + totalRes);
                                 result = node.findPath("result");
                                 handleQueryResults(objectClass, resultsHandler, result);
@@ -617,11 +617,15 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
     private void handleQueryResults(ObjectClass objectClass, ResultsHandler handler,
                                     JsonNode result) {
         System.out.println(" handleQueryResults ");
-        for (JsonNode objNode : result) {
-            ConnectorObject connectorObject = buildUserObject(objNode, objectClass);
-            if (!handler.handle(connectorObject)) {
-                break;
+        try {
+            for (JsonNode objNode : result) {
+                ConnectorObject connectorObject = buildUserObject(objNode, objectClass);
+                if (!handler.handle(connectorObject)) {
+                    break;
+                }
             }
+        } catch (Exception e) {
+            System.out.println(" Error in handleQueryResults");
         }
     }
     private boolean resultHandle(final Object obj, ResultsHandler resultsHandler) {
