@@ -233,7 +233,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                 if(null != operationOptions.getPageSize()){
                     _pageSize = operationOptions.getPageSize();
                 } else {
-                    _pageSize = 10;
+                    _pageSize = 50;
                 }
                 userStr = userStr + "&_totalPagedResultsPolicy=EXACT";
                 String qry = null;
@@ -263,7 +263,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
 
                      */
                     // Finished initial
-                   //do {
+                   do {
                         if(null != _pageCookie) {
                             qry = userStr + "&_pageSize=" + _pageSize+"&_pagedResultsCookie="+_pageCookie;
                         } else {
@@ -274,21 +274,24 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                             node = map.readTree(res);
                             _pageCookie = node.get("pagedResultsCookie").textValue();
                             int totalRes = node.get("totalPagedResults").asInt();
-                            System.out.println("Cookie:"+_pageCookie+" Total Count:" + totalRes);
+                            System.out.println("Cookie:" + _pageCookie + " Total Count:" + totalRes);
                             result = node.findPath("result");
                             handleQueryResults(objectClass, resultsHandler, result);
-                            if (resultsHandler instanceof SearchResultsHandler) {
-                                if(null != _pageCookie) {
-                                    final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
-                                    ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
-                                } else {
-                                    ((SearchResultsHandler) resultsHandler).handleResult(new SearchResult());
-                                }
-                            }
                         }
+                   } while(null !=_pageCookie);
+
+                   if (resultsHandler instanceof SearchResultsHandler) {
+                       if(null != _pageCookie) {
+                           final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
+                           ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
+                       } else {
+                           ((SearchResultsHandler) resultsHandler).handleResult(new SearchResult());
+                       }
+                   }
+                   //     }
                         //if(_pagedResultsOffset > 0)
                         //    _pageCookie = null;
-                   //} while(null !=_pageCookie);
+                   //
 
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
