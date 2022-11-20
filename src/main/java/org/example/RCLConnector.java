@@ -167,6 +167,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
         boolean isGet = false;
         String s = null;
         ObjectMapper map = new ObjectMapper();
+        String userStr = null;
 
         Uid uuid = null;
         if(null != filter) {
@@ -202,17 +203,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
             JsonNode node = null;
             JsonNode result = null;
             ConnectorObject connectorObject = null;
-            int _pagedResultsOffset = 0;
-
-            try {
-                _pagedResultsOffset = operationOptions.getPagedResultsOffset();
-            } catch (Exception e) {_pagedResultsOffset = 0;}
-
-            if(_pagedResultsOffset > 0) {
-                _pageCookie = null;
-            } else {
-                //System.out.println(" Will perform cookie-based search ");
-            }
+            _pageSize = null;
             if(isGet) {
                 //System.out.println(" GET: "+ userStr);
                 try {
@@ -230,45 +221,15 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                     throw new RuntimeException(e);
                 }
             } else {
-                if(null != operationOptions.getPageSize()){
-                    _pageSize = operationOptions.getPageSize();
-                } else {
-                    _pageSize = 50;
-                }
                 userStr = userStr + "&_totalPagedResultsPolicy=EXACT";
                 String qry = null;
-                try {
-                    if( _pagedResultsOffset > 0){
-                        _pageCookie = null;
-                        qry = userStr +"&_pageSize="+_pageSize+"&_pagedResultsOffset="+_pagedResultsOffset;
-                        //System.out.println(" URL with Offset: " + qry);
-                    } else {
-                        qry = userStr +"&_pageSize="+_pageSize;
-                        //System.out.println(" URL without Offset: " + qry);
-                    }
-                    /*
-                    res = getObject(qry);
-
-                    if(null != res) {
-                        node = map.readTree(res);
-                        result = node.findPath("result");
-                        _pageCookie = node.get("pagedResultsCookie").textValue();
-                        int remainingResults = -1;
-                        handleQueryResults(objectClass, resultsHandler, result);
-                        if (resultsHandler instanceof SearchResultsHandler) {
-                            final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
-                            ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
-                        }
-                    }
-
-                     */
-                    // Finished initily
-                   do {
-                        if(null != _pageCookie) {
-                            qry = userStr + "&_pageSize=" + _pageSize+"&_pagedResultsCookie="+_pageCookie;
-                        } else {
+                try{
+                    if(null != operationOptions.getPageSize()){
+                        _pageSize = operationOptions.getPageSize();
+                        if(null != _pageSize) {
                             qry = userStr + "&_pageSize=" + _pageSize;
                         }
+                        System.out.println(" Calling "+ qry);
                         res = getObject(qry);
                         if(null != res) {
                             node = map.readTree(res);
@@ -277,22 +238,28 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                             System.out.println("Cookie:" + _pageCookie + " Total Count:" + totalRes);
                             result = node.findPath("result");
                             handleQueryResults(objectClass, resultsHandler, result);
+                            if (resultsHandler instanceof SearchResultsHandler) {
+                                if (null != _pageCookie) {
+                                    final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
+                                    ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
+                                }
+                            }
                         }
-                   } while(null !=_pageCookie);
-
-                   if (resultsHandler instanceof SearchResultsHandler) {
-                       if(null != _pageCookie) {
-                           final SearchResult searchResult = new SearchResult(_pageCookie, SearchResult.CountPolicy.EXACT, _pageSize, -1);
-                           ((SearchResultsHandler) resultsHandler).handleResult(searchResult);
-                       } else {
-                           ((SearchResultsHandler) resultsHandler).handleResult(new SearchResult());
-                       }
-                   }
-                   //     }
-                        //if(_pagedResultsOffset > 0)
-                        //    _pageCookie = null;
-                   //
-
+                    } else {
+                        qry = userStr;
+                        System.out.println(" Calling executeQuery "+ qry);
+                        res = getObject(qry);
+                        do {
+                            if(null != res) {
+                                node = map.readTree(res);
+                                _pageCookie = node.get("pagedResultsCookie").textValue();
+                                int totalRes = node.get("totalPagedResults").asInt();
+                                System.out.println("Cookie:" + _pageCookie + " Total Count:" + totalRes);
+                                result = node.findPath("result");
+                                handleQueryResults(objectClass, resultsHandler, result);
+                            }
+                        } while(null!= _pageCookie);
+                    }
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
                 } catch (IOException e) {
