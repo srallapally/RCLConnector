@@ -226,8 +226,11 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                 try{
                     if(null != operationOptions.getPageSize()){
                         _pageSize = operationOptions.getPageSize();
-                        if(null != _pageSize) {
+                        _pagedResultsOffset = String.valueOf(operationOptions.getPagedResultsOffset());
+                        if(null != _pageSize && null == _pagedResultsOffset ) {
                             qry = userStr + "&_pageSize=" + _pageSize;
+                        } else {
+                            qry = userStr + "&_pagedResultsOffset="+_pagedResultsOffset;
                         }
                         System.out.println(" Calling "+ qry);
                         res = getObject(qry);
@@ -249,7 +252,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                         qry = userStr;
                         System.out.println(" Calling executeQuery "+ qry);
                         res = getObject(qry);
-                        do {
+                        //do {
                             if(null != res) {
                                 node = map.readTree(res);
                                 _pageCookie = node.get("pagedResultsCookie").textValue();
@@ -258,7 +261,7 @@ public class RCLConnector implements Connector, AuthenticateOp, CreateOp, Delete
                                 result = node.findPath("result");
                                 handleQueryResults(objectClass, resultsHandler, result);
                             }
-                        } while(null!= _pageCookie);
+                        //} while(null!= _pageCookie);
                     }
                 } catch (JsonProcessingException e) {
                     throw new RuntimeException(e);
